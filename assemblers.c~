@@ -1,0 +1,68 @@
+//#include "factory.h"
+#include <stdio.h>
+#include<pthread.h>
+#include "assemblers.h"
+#include <stdlib.h>
+#include <string.h>
+#include <semaphore.h>
+#include <unistd.h>
+pthread_mutex_t lock =PTHREAD_MUTEX_INITIALIZER;
+Product *buffer;
+int maxsize;
+int in=0;
+//following two lines from https://eclass.srv.ualberta.ca/pluginfile.php/2678507/mod_resource/content/1/sample_colors
+#define MAXCOLORS 147
+void init_assembler(Product *bufferaddress,int buffersize){
+  buffer=bufferaddress;
+  maxsize=buffersize;
+}
+void *assembler(void *arg){
+  //Get the number of production and the color for each thread.
+  AInfo *info=(AInfo *) arg;
+  Product *p=malloc(1*sizeof(Product));
+  int produce=info->nproduce;
+  p->color=info->tnumber;
+  //It thread numbers greater than 147, recycle colors.
+  if ((p->color)>=MAXCOLORS){
+    p->color=(p->color)-MAXCOLORS; 
+  }
+  //Free the memory in parameter.
+  free(info);
+  int i;
+  for (i=1;i<=produce;i++){
+    p->number=i;
+    pthread_mutex_lock(&lock);
+    while (countbuffer==maxsize){
+      pthread_cond_wait(&qready,&lock);
+    }
+    PutOnBuffer(p);
+    pthread_cond_signal(&qready2);
+    pthread_mutex_unlock(&lock);
+    int seconds;
+    seconds=rand()%2;
+    seconds=seconds*100;
+    usleep((unsigned int)(seconds));
+    }
+
+  //Produce products with color and number.
+  /* while (pronum[p->color]<produce){
+    pronum[p->color]++;
+    p->number=pronum[p->color];
+    pthread_mutex_lock(&lock);
+    PutOnBuffer(p);
+    pthread_mutex_unlock(&lock);
+    sleep(0.5);
+    }*/
+  free(p);
+  return((void *)0);
+}
+void * PutOnBuffer(Product *p){
+  //sem_wait(&full);
+  buffer[in]=*p;
+  // printf(" %d %d\n ",buffer[in].color,buffer[in].number);
+  in=(in+1)%maxsize;
+  countbuffer++;
+  //sem_post(&empty);
+//printf(" %d %d\n ",p->color,p->number);
+  return((void *)0);
+}

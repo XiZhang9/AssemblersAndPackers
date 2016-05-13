@@ -1,0 +1,64 @@
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Queue.h"
+#include <stdio.h>
+
+void Que_init(AQueue *a, int size){
+  a->head=0;
+  a->tail=0;
+  a->n=0;
+  a->size=size;
+}
+
+int Que_size(const AQueue *a){
+  return a->n;
+}
+
+int Que_add(AQueue *a, char **data){
+  if ((a->n)==(a->size)){
+    return 0;
+  }
+  else{
+
+    Item *addnew=(Item *) malloc(sizeof(Item));
+    addnew->data=data;
+    if (a->n==0){
+      a->tail=addnew;
+      a->head=addnew;
+      a->n++;
+    }
+    else{
+    addnew->right=a->head;
+    a->head->left=addnew;
+    a->head=addnew;
+    a->n++;
+    }
+  }
+}
+
+void Que_show(AQueue *a){
+  printf("\n%d\n",a->n);
+  int i;
+  Item *addnew=(Item *) malloc(sizeof(Item));
+  addnew=a->head;
+  for (i=0;i<(a->n);i++){
+    printf("----%s",*(addnew->data));
+    addnew->right=addnew;
+  }
+  
+}
+/*char * Que_take(AQueue *a){
+  assert(a->tail);
+  a->n--;
+  if (a->n>=0){
+  Item *newtail=a->tail->left;
+  newtail->right=NULL;
+  }
+  int length=strlen(a->tail->data);
+  char product[length];
+  strcpy(product,a->tail->data);
+  free(a->tail);;
+  return product;
+}
+*/

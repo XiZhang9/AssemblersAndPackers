@@ -1,0 +1,24 @@
+#pragma once
+
+struct Item {
+
+  struct Item *left;
+  struct Item *right;
+  char **data;
+  
+};
+
+typedef struct Item Item;
+
+typedef struct{
+  Item *head;
+  Item *tail;
+  int size;
+  int n;
+} AQueue;
+
+void Que_init(AQueue *a,int size);
+int Que_size(const AQueue *a);
+int Que_add(AQueue *a, char **data);
+void Que_show(AQueue *a);
+//char * Que_take(AQueue *a);

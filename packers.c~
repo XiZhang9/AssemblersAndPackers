@@ -1,0 +1,154 @@
+#include <stdio.h>
+#include<pthread.h>
+#include "factory.h"
+#include "packers.h"
+#include <stdlib.h>
+#include <string.h>
+#include <semaphore.h>
+#include <unistd.h>
+Product *buffer;
+int buffersize;
+int *runcount;
+int out=0;
+int productboxed=0;
+int countc=0;
+int tpacker;
+pthread_mutex_t lock2 =PTHREAD_MUTEX_INITIALIZER;
+//following two lines from https://eclass.srv.ualberta.ca/pluginfile.php/2678507/mod_resource/content/1/sample_colors
+const char *COLORS[] = {"AliceBlue","AntiqueWhite","Aqua","Aquamarine","Azure","Beige","Bisque","Black","BlanchedAlmond","Blue","BlueViolet","Brown","BurlyWood","CadetBlue","Chartreuse","Chocolate","Coral","CornflowerBlue","Cornsilk","Crimson","Cyan","DarkBlue","DarkCyan","DarkGodenRod","DarkGray","DarkGrey","DarkGreen","DarkKhaki","DarkMagenta","DarkOliveGreen","Darkorange","DarkOrchid","DarkRed","DarkSalmon","DarkSeaGreen","DarkSlateBlue","DarkSlateGray","DarkSlateGrey","DarkTurquoise","DarkViolet","DeepPink","DeepSkyBlue","DimGray","DimGrey","DodgerBlue","FireBrick","FloralWhite","ForestGreen","Fuchsia","Gainsboro","GhostWhite","God","GodenRod","Gray","Grey","Green","GreenYellow","HoneyDew","HotPink","IndianRed","Indigo","Ivory","Khaki","Lavender","LavenderBlush","LawnGreen","LemonChiffon","LightBlue","LightCoral","LightCyan","LightGodenRodYellow","LightGray","LightGrey","LightGreen","LightPink","LightSalmon","LightSeaGreen","LightSkyBlue","LightSlateGray","LightSlateGrey","LightSteelBlue","LightYellow","Lime","LimeGreen","Linen","Magenta","Maroon","MediumAquaMarine","MediumBlue","MediumOrchid","MediumPurple","MediumSeaGreen","MediumSlateBlue","MediumSpringGreen","MediumTurquoise","MediumVioletRed","MidnightBlue","MintCream","MistyRose","Moccasin","NavajoWhite","Navy","OdLace","Olive","OliveDrab","Orange","OrangeRed","Orchid","PaleGodenRod","PaleGreen","PaleTurquoise","PaleVioletRed","PapayaWhip","PeachPuff","Peru","Pink","Plum","PowderBlue","Purple","Red","RosyBrown","RoyalBlue","SaddleBrown","Salmon","SandyBrown","SeaGreen","SeaShell","Sienna","Silver","SkyBlue","SlateBlue","SlateGray","SlateGrey","Snow","SpringGreen","SteelBlue","Tan","Teal","Thistle","Tomato","Turquoise","Violet","Wheat","White","WhiteSmoke","Yellow","YellowGreen"};
+void init_packers(Product *bufferaddress,int size, int *pcount,int p){
+  buffer=bufferaddress;
+  buffersize=size;
+  runcount=pcount;
+  tpacker=p;
+}
+void *packer(void( *arg)){
+  PInfo *pinfo=(PInfo *) arg;
+  int boxnum=pinfo->boxnumber;
+  int iteminbox=pinfo->nitem;
+  int remain=pinfo->remain;
+  free(pinfo);
+  PackToBox(iteminbox,boxnum,remain);
+  return((void *)0);
+}
+void PackToBox(int maxitem,int boxnum,int remain){
+  int iteminbox=maxitem;
+  Product *box=malloc(sizeof(Product)*(long unsigned int)(iteminbox));
+  int i;
+  //printf("=======%d %d",totalproducts,productboxed);
+  while(runcount[boxnum]>0){
+    runcount[boxnum]--;
+    // printf("%d %d\n",remain,runcount[tpacker-1]);
+    if(remain>0 && runcount[tpacker-1]==0 && boxnum==(tpacker-1)){
+      //printf("herehere\n");
+
+      for (i=0;i<remain;i++){
+        countc++;
+        // printf("%d\n",countc);
+        pthread_mutex_lock(&lock2);
+        if (countc<=totalproducts){
+          while (countbuffer==0){
+            pthread_cond_wait(&qready2,&lock2);
+          }
+          PackProduct(box,i,remain);
+          pthread_cond_signal(&qready);
+        }
+        else{
+          NotFullBox(box,i,iteminbox);
+        }
+          pthread_mutex_unlock(&lock2);
+      }
+       int seconds;
+        seconds=rand()%2;
+        seconds=seconds*100;
+        usleep((unsigned int)(seconds));
+    }
+    else{
+      for (i=0;i<iteminbox;i++){
+        pthread_mutex_lock(&lock2);
+        countc++;
+        //printf("%d\n",countc);
+        if (countc<=totalproducts){
+          while (countbuffer==0){
+            pthread_cond_wait(&qready2,&lock2);
+          }
+          PackProduct(box,i,iteminbox);
+          pthread_cond_signal(&qready);
+        }
+        else{
+          NotFullBox(box,i,iteminbox);
+        }
+        pthread_mutex_unlock(&lock2);
+      
+        int seconds;
+        seconds=rand()%2;
+        seconds=seconds*100;
+        usleep((unsigned int)(seconds));
+      }
+    }
+  }
+  
+  free(box);
+  /* while (countin[boxnum]<iteminbox){
+    countin[boxnum]++;
+    pthread_mutex_lock(&lock2);
+    PackProduct(boxnum);
+    pthread_mutex_unlock(&lock2);
+    
+    }*/
+  
+}
+void PackProduct(Product *blist,int i,int maxitem){
+  //sem_wait(&empty);
+  Product *p=malloc(1*sizeof(Product));
+  p->number=buffer[out].number;
+  p->color=buffer[out].color;
+  blist[i]=*p;
+  countbuffer--;
+  productboxed++;
+  //printf("=====%d %d\n ",blist[i].color,blist[i].number);
+  out = (out + 1) %buffersize;
+  // sem_post(&full);
+  free(p);
+  if(i==(maxitem-1)){
+    int boxi;
+    pthread_t tid;
+    tid=pthread_self();
+    int ptid=(int)(tid%10000);
+    printf("[Packer %04d]: I have a box of products containing: ",ptid);
+    for (boxi=0;boxi<maxitem;boxi++){
+      printf(" %s%d, ",COLORS[blist[boxi].color],blist[boxi].number);
+    }
+    /*if (productboxed<=totalproducts){
+      printf("=-==%d",productboxed);
+      PackToBox(maxitem);
+      }*/
+    printf("\n");
+    //free(blist);
+  }
+}
+void NotFullBox(Product *blist,int i,int maxitem){
+  Product *p=malloc(1*sizeof(Product));
+  p->number=-1;
+  p->color=-1;
+  blist[i]=*p;
+  free(p);
+  if(i==(maxitem-1)){
+    int boxi;
+    pthread_t tid;
+    tid=pthread_self();
+    int ptid=(int)(tid%10000);
+    if( blist[0].color>(-1)){
+      printf("[Packer %04d]: I have a box of products containing: ",ptid);
+      for (boxi=0;boxi<maxitem;boxi++){
+        if (blist[boxi].color>(-1)){
+          printf(" %s%d, ",COLORS[blist[boxi].color],blist[boxi].number);
+        }
+        else{
+          printf(" ");
+        } 
+      }
+      printf("\n");
+    }
+  }
+}
